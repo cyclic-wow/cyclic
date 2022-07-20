@@ -1,0 +1,149 @@
+/*
+** Firewall.
+*/
+
+ufw allow 22
+ufw allow from LOCAL_IP to any port 3306
+ufw enable
+
+
+/*
+** Swap space.
+*/
+
+// Allocate.
+fallocate -l 4G /mnt/swap
+chmod 600 /mnt/swap
+mkswap /mnt/swap
+swapon /mnt/swap
+
+// Mount.
+nano /etc/fstab
+# Append.
+/mnt/swap none swap sw 0 0
+# End.
+
+// Swappiness.
+nano /etc/sysctl.conf
+# Append.
+vm.swappiness=1
+# End.
+
+
+/*
+** Time zone.
+*/
+
+dpkg-reconfigure tzdata
+# US -> Eastern
+
+
+/*
+** Repositories.
+*/
+
+apt install -y language-pack-en-base
+
+// PHP.
+add-apt-repository -y ppa:ondrej/php-qa
+add-apt-repository -y ppa:ondrej/php
+
+
+// MySQL repository.
+// Source: https://dev.mysql.com/downloads/repo/apt
+wget --no-check-certificate -P /usr/local/src https://dev.mysql.com/get/mysql-apt-config_0.8.22-1_all.deb
+dpkg -i /usr/local/src/mysql-apt-config_0.8.22-1_all.deb
+# mysql-8.0/Enabled/Disabled.
+
+apt update
+apt upgrade -y
+apt autoremove -y
+reboot
+
+
+/*
+** MySQL.
+** Changelog: https://dev.mysql.com/doc/relnotes/mysql/8.0/en/
+*/
+
+apt install -y mysql-server 
+# ubuntu -> ubuntu -> Use Legacy Authentication Method.
+
+// Users.
+mysql -uroot -pubuntu -e "CREATE USER 'php'@localhost IDENTIFIED BY 'ubuntu'; GRANT ALL PRIVILEGES ON *.* TO 'php'@localhost; FLUSH PRIVILEGES;"
+mysql -uroot -pubuntu -e "CREATE USER 'phpmyadmin'@LOCAL_IP IDENTIFIED WITH mysql_native_password BY 'ubuntu'; GRANT ALL PRIVILEGES ON *.* TO 'phpmyadmin'@LOCAL_IP; FLUSH PRIVILEGES;";
+
+// Config.
+truncate -s0 /etc/mysql/mysql.conf.d/mysqld.cnf
+nano /etc/mysql/mysql.conf.d/mysqld.cnf
+# Insert docs/mysqld.cnf.
+
+
+/*
+** OpenSSL.
+** Source: https://www.openssl.org/source
+*/
+
+// Deps.
+apt install -y make gcc
+
+// Source.
+wget --no-check-certificate -P /usr/local/src https://www.openssl.org/source/openssl-1.1.1m.tar.gz
+tar -xzf /usr/local/src/openssl-1.1.1m.tar.gz -C /usr/local/src
+
+// Compile.
+cd /usr/local/src/openssl-1.1.1m
+make clean
+./config
+make -j2
+make install
+
+
+/*
+** PHP - CLI.
+** Source: https://www.php.net/downloads.php
+** Changelog: https://www.php.net/ChangeLog-8.php
+*/
+
+// Deps.
+apt install -y libcurl4-openssl-dev libonig-dev libreadline-dev libxml2-dev re2c pkg-config php8.0-dev bison zlib1g-dev
+
+// Source.
+wget --no-check-certificate -P /usr/local/src https://www.php.net/distributions/php-8.0.17.tar.gz
+tar -xzf /usr/local/src/php-8.0.17.tar.gz -C /usr/local/src
+
+// Config.
+cd /usr/local/src/php-8.0.17
+make clean
+./buildconf --force
+./configure --disable-all --disable-cgi --disable-phpdbg --enable-dom --enable-mbstring --enable-opcache --enable-re2c-cgoto --enable-zts --with-config-file-path=/etc/php8.0-zts --with-curl --with-libxml --with-mysqli --with-openssl --with-readline=/usr/local --with-zlib
+
+// Compile.
+make -j2
+make install
+
+// Parallel.
+cd /usr/local/src
+
+# Update: cd /usr/local/src/parallel && git pull
+git clone https://github.com/krakjoe/parallel.git
+
+cd parallel
+phpize
+make clean
+./configure --enable-parallel  
+make -j2
+make install
+
+// Config.
+mkdir /etc/php8.0-zts
+wget --no-check-certificate https://curl.haxx.se/ca/cacert.pem -O /etc/php8.0-zts/cacert.pem
+cp /usr/local/src/php-8.0.17/php.ini-development /etc/php8.0-zts/php.ini
+nano /etc/php8.0-zts/php.ini
+# Append docs/php/php.ini
+
+/*
+** Working dirs.
+*/
+
+mkdir /srv/src

@@ -11,7 +11,7 @@ curl_setopt_array($handle, [CURLOPT_ENCODING => '', CURLOPT_RETURNTRANSFER => 1]
 
 if (Config::UPDATE_ITEM_LIST) 
 {
-	curl_setopt($handle, CURLOPT_URL, 'https://api.nexushub.co/wow-classic/v1/items/faerlina-horde');
+	curl_setopt($handle, CURLOPT_URL, sprintf('https://api.nexushub.co/wow-classic/v1/items/%s', Config::WOW_SERVER_NAME));
 
 	$exec     = json_decode(curl_exec($handle), true);
 	$item_ids = [];
@@ -30,7 +30,7 @@ if (Config::UPDATE_ITEM_LIST)
 			curl_setopt(
 				$handle, 
 				CURLOPT_URL, 
-				sprintf('https://api.nexushub.co/wow-classic/v1/items/faerlina-horde/%d', $item_id)
+				sprintf('https://api.nexushub.co/wow-classic/v1/items/%s/%d', Config::WOW_SERVER_NAME, $item_id)
 			);
 	
 			do 
@@ -99,7 +99,7 @@ if (Config::UPDATE_AUCTION_HISTORY)
 		curl_setopt(
 			$handle, 
 			CURLOPT_URL, 
-			sprintf('https://api.nexushub.co/wow-classic/v1/items/faerlina-horde/%d/prices?timerange=999', $item_id)
+			sprintf('https://api.nexushub.co/wow-classic/v1/items/%s/%d/prices?timerange=999', Config::WOW_SERVER_NAME, $item_id)
 		);
 
 		do 
